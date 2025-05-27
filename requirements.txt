@@ -4,3 +4,4 @@ numpy
 matplotlib
 tabpfn
 xgboost
+torch
