@@ -1,5 +1,3 @@
-# Datei: model_training/xgboost/xgb_train.py
-
 import os
 import sys
 import argparse
@@ -39,15 +37,15 @@ if variant == "baseline":
 
 elif variant == "tuned":
     params = {
-        "n_estimators": 500,
-        "max_depth": 5,
-        "learning_rate": 0.05,
-        "subsample": 0.8,
-        "colsample_bytree": 0.9,
-        "gamma": 0.2,
-        "min_child_weight": 3,
-        "reg_alpha": 0.1,
-        "reg_lambda": 1.0,
+        "n_estimators": 290,
+        "max_depth": 4,
+        "learning_rate": 0.04106995869128968,
+        "subsample": 0.6201062258952356,
+        "gamma": 1.7475309196381257,
+        "colsample_bytree": 0.8260112267462354,
+        "min_child_weight": 7,
+        "reg_alpha": 51,
+        "reg_lambda": 0.3804259114008318,
         "random_state": 42
     }
     model = XGBRegressor(**params)
