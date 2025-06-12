@@ -20,7 +20,7 @@ def get_features_and_target(df: pd.DataFrame, target_column: str = "PullTest (N)
     y = df[target_column]
 
     # Remove columns that are either constant, textual, or unavailable at prediction time
-    drop_cols = ["Material", "Category", "Comments", "NuggetDiameter (mm)"]
+    drop_cols = ["Sample ID", "Material", "Category", "Comments", "NuggetDiameter (mm)"]
     X = X.drop(columns=drop_cols, errors="ignore")
 
     return X, y
