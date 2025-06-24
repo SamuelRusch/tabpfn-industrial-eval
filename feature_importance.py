@@ -12,7 +12,7 @@ results_dir = "results_feature_importance_xgb"
 os.makedirs(results_dir, exist_ok=True)
 
 # Modell laden
-xgb_model_path = "model_training/xgboost/tuned/xgb_best_model.pkl"
+xgb_model_path = "model_training/xgboost/tuned/xgb_best_model_cv.pkl"
 xgb_model = joblib.load(xgb_model_path)
 
 # Daten laden, um Feature-Namen zu bekommen

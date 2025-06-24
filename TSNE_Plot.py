@@ -1,31 +1,52 @@
+import pandas as pd
+from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
-import seaborn as sns
-import pandas as pd
-from preprocessing import get_features_and_target
 
+# 1. Daten einlesen
 train_df = pd.read_csv("data/train_data.csv")
 dev_df = pd.read_csv("data/development_data.csv")
-X_train, y_train = get_features_and_target(train_df)
-X_dev, y_dev = get_features_and_target(dev_df)
-X_dev = X_dev[X_train.columns]
 
-# tsne benötigt keine Zielvariable – nur die Features
-X_all = pd.concat([X_train, X_dev])
-y_all = pd.concat([y_train, y_dev])
+# 2. Set-Spalte hinzufügen, falls du später unterscheiden willst
+train_df['Set'] = 'train'
+dev_df['Set'] = 'dev'
 
-# Reduziere auf 2 Dimensionen
-tsne = TSNE(n_components=2, perplexity=30, random_state=42)
-X_tsne = tsne.fit_transform(X_all)
+# 3. DataFrames kombinieren
+df = pd.concat([train_df, dev_df], ignore_index=True)
 
-# Als DataFrame für Plot
-tsne_df = pd.DataFrame(X_tsne, columns=["TSNE-1", "TSNE-2"])
-tsne_df["Target"] = y_all.values
+# 4. Kategorische Features encoden (z.B. "Material")
+if df['Material'].dtype == object or str(df['Material'].dtype).startswith('category'):
+    df['Material_enc'] = LabelEncoder().fit_transform(df['Material'])
+else:
+    df['Material_enc'] = df['Material']
 
-# Plot
-plt.figure(figsize=(8, 6))
-sns.scatterplot(data=tsne_df, x="TSNE-1", y="TSNE-2", hue="Target", palette="coolwarm", s=50)
-plt.title("t-SNE Visualization (colored by target value)")
+# 5. Features auswählen (ohne Target/ohne ID/ohne Kommentare)
+features = [
+    'Pressure (PSI)', 'Welding Time (ms)', 'Angle (Deg)', 'Force (N)', 'Current (A)',
+    'Thickness A (mm)', 'Thickness B (mm)', 'Material_enc'
+]
+# Manche Spalten könnten fehlen, also vorher checken:
+features = [col for col in features if col in df.columns]
+
+# 6. Fehlende Werte behandeln (z.B. mit Mittelwert füllen)
+X = df[features].fillna(df[features].mean())
+
+# 7. Standardisieren
+X = StandardScaler().fit_transform(X)
+
+# 8. t-SNE anwenden
+tsne = TSNE(n_components=2, random_state=42)
+X_embedded = tsne.fit_transform(X)
+
+# 9. Plotten, nach 'Category' eingefärbt
+plt.figure(figsize=(9,7))
+categories = df['Category'].astype(str).unique()
+for cat in categories:
+    idx = df['Category'] == cat
+    plt.scatter(X_embedded[idx, 0], X_embedded[idx, 1], label=cat, alpha=0.7)
+plt.legend()
+plt.title("t-SNE der kombinierten Daten (train+dev), nach 'Category' eingefärbt")
+plt.xlabel("t-SNE 1")
+plt.ylabel("t-SNE 2")
 plt.tight_layout()
-plt.savefig("results_comparison/tsne_plot_regression.png")
-plt.close()
+plt.show()
