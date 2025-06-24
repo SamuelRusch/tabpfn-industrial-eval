@@ -70,7 +70,7 @@ else:
 if use_cv:
     print(f"\n🔁 Performing {cv_folds}-Fold Cross-Validation with seed {random_seed}...")
 
-    kf = KFold(n_splits=cv_folds, shuffle=True, random_state=random_seed)
+    kf = KFold(n_splits=cv_folds, shuffle=True, random_state=42)
     all_metrics = {"MSE": [], "RMSE": [], "R2": []}
 
     for fold, (train_idx, val_idx) in enumerate(kf.split(X)):

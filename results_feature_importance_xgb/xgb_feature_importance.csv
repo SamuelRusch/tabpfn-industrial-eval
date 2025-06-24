@@ -1,10 +1,9 @@
 Feature,Importance
-Welding Time (ms),0.22488827
-Angle (Deg),0.1660048
-Thickness A (mm),0.1335518
-Thickness B (mm),0.121283665
-Sample ID,0.095394954
-Current (A),0.09341308
-Force (N),0.06972156
-Thickness A+B (mm),0.06557663
-Pressure (PSI),0.03016526
+Welding Time (ms),0.46075684
+Angle (Deg),0.14715698
+Pressure (PSI),0.11378229
+Force (N),0.07827302
+Thickness B (mm),0.06727644
+Current (A),0.060873017
+Thickness A+B (mm),0.041720558
+Thickness A (mm),0.030160882

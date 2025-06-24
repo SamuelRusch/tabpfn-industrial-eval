@@ -3,12 +3,15 @@ import sys
 import pandas as pd
 import numpy as np
 import xgboost
+import joblib
 import json
 print("XGBoost Version:", xgboost.__version__)
 import xgboost as xgb
 from sklearn.metrics import mean_squared_error
+from sklearn.model_selection import KFold, cross_val_score
 from xgboost.callback import EarlyStopping
 
+cv = KFold(n_splits=5, shuffle=True, random_state=42)
 
 from hyperopt import STATUS_OK, Trials, fmin, hp, tpe
 
@@ -39,6 +42,7 @@ space={'max_depth': hp.quniform("max_depth", 2, 4, 1),
         'seed': 0
     }
 
+
 def objective(space):
     clf = xgb.XGBRegressor(
         n_estimators=int(space['n_estimators']),
@@ -47,25 +51,23 @@ def objective(space):
         reg_alpha=int(space['reg_alpha']),
         min_child_weight=int(space['min_child_weight']),
         colsample_bytree=space['colsample_bytree'],
-        eval_metric="rmse",         
+        subsample=space['subsample'],
+        learning_rate=space['learning_rate'],
+        reg_lambda=space['reg_lambda'],
+        eval_metric="rmse",
         seed=0,
-        early_stopping_rounds = 10 
+        verbosity=0
     )
     
-    evaluation = [( X_train, y_train), ( X_dev, y_dev)]
-    
-    
-    clf.fit(
-        X_train, y_train,
-        eval_set=[(X_train, y_train), (X_dev, y_dev)],
-        verbose=False
+    # Cross Validation: Nur Trainingsdaten verwenden!
+    scores = cross_val_score(
+        clf, X_train, y_train,
+        scoring="neg_root_mean_squared_error",  # oder "neg_mean_squared_error"
+        cv=cv,  # cv = z. B. KFold(n_splits=5, shuffle=True, random_state=42)
+        n_jobs=-1
     )
-    
-
-    pred = clf.predict(X_dev)
-    mse = mean_squared_error(y_dev, pred)
-    rmse = np.sqrt(mse)
-    print("RMSE:", rmse)
+    rmse = -scores.mean()
+    print("CV RMSE:", rmse)
     return {'loss': rmse, 'status': STATUS_OK}
 
 
@@ -76,6 +78,34 @@ best_hyperparams = fmin(fn = objective,
                         algo = tpe.suggest,
                         max_evals = 100,
                         trials = trials)
+
+# Parameter ggf. von float zu int umwandeln, falls nötig
+best_params = best_hyperparams
+best_params['n_estimators'] = int(best_params['n_estimators'])
+best_params['max_depth'] = int(best_params['max_depth'])
+best_params['reg_alpha'] = int(best_params['reg_alpha'])
+best_params['min_child_weight'] = int(best_params['min_child_weight'])
+
+final_model = xgb.XGBRegressor(
+    n_estimators=best_params['n_estimators'],
+    max_depth=best_params['max_depth'],
+    gamma=best_params['gamma'],
+    reg_alpha=best_params['reg_alpha'],
+    min_child_weight=best_params['min_child_weight'],
+    colsample_bytree=best_params['colsample_bytree'],
+    subsample=best_params['subsample'],
+    learning_rate=best_params['learning_rate'],
+    reg_lambda=best_params['reg_lambda'],
+    eval_metric="rmse",
+    seed=0,
+    verbosity=0
+)
+
+final_model.fit(X_train, y_train)
+preds = final_model.predict(X_dev)
+mse = mean_squared_error(y_dev, preds)
+rmse = np.sqrt(mse)
+print(f"Finales Modell: RMSE auf Dev-Set: {rmse:.3f}")
 
 print("The best hyperparameters are : ","\n")
 print(best_hyperparams)
@@ -107,3 +137,4 @@ with open(file_path, "w") as f:
     json.dump(converted_params, f, indent=4)
 
 print(f"✅ Beste Hyperparameter gespeichert unter: {file_path}")
+

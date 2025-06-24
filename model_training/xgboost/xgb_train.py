@@ -32,29 +32,17 @@ if variant == "baseline":
         "random_state": 42
     }
     model = XGBRegressor(**params)
-
-    param_suffix = f"_n{params['n_estimators']}"
-
 elif variant == "tuned":
-    params = {
-        "n_estimators": 290,
-        "max_depth": 4,
-        "learning_rate": 0.04106995869128968,
-        "subsample": 0.6201062258952356,
-        "gamma": 1.7475309196381257,
-        "colsample_bytree": 0.8260112267462354,
-        "min_child_weight": 7,
-        "reg_alpha": 51,
-        "reg_lambda": 0.3804259114008318,
-        "random_state": 42
-    }
-    model = XGBRegressor(**params)
+    param_file = f"xgb_best_model.json"
+    with open(param_file, "r") as f:
+        params = json.load(f)
+        model = XGBRegressor(**params)
 
-    param_suffix = "".join([
-        f"_n{params['n_estimators']}",
-        f"_md{params['max_depth']}",
-        f"_lr{params['learning_rate']}"
-    ])
+        param_suffix = "".join([
+            f"_n{params['n_estimators']}",
+            f"_md{params['max_depth']}",
+            f"_lr{params['learning_rate']}"
+        ])
 else:
     raise ValueError("Variant must be either 'baseline' or 'tuned'")
 
