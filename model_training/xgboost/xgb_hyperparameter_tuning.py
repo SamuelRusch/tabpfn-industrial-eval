@@ -3,6 +3,7 @@ import sys
 import pandas as pd
 import numpy as np
 import xgboost
+import json
 print("XGBoost Version:", xgboost.__version__)
 import xgboost as xgb
 from sklearn.metrics import mean_squared_error
@@ -26,8 +27,8 @@ X_train, y_train = get_features_and_target(train_df)
 dev_df = pd.read_csv("data/development_data.csv")
 X_dev, y_dev = get_features_and_target(dev_df)
 
-space={'max_depth': hp.quniform("max_depth", 4, 8, 1),
-       'learning_rate': hp.uniform('learning_rate', 0.01, 0.1),
+space={'max_depth': hp.quniform("max_depth", 2, 4, 1),
+       'learning_rate': hp.uniform('learning_rate', 0.05, 0.1),
        'subsample': hp.uniform('subsample', 0.6, 1.0),
         'gamma': hp.uniform ('gamma', 0,9),
         'reg_alpha' : hp.quniform('reg_alpha', 0,180,1),
@@ -78,3 +79,31 @@ best_hyperparams = fmin(fn = objective,
 
 print("The best hyperparameters are : ","\n")
 print(best_hyperparams)
+
+# Pfad und Umwandlung der besten Parameter
+output_dir = os.path.join("model_training", model_name, "tuned")
+os.makedirs(output_dir, exist_ok=True)
+
+# Umwandlung von Float zu int, wo nötig
+converted_params = {
+    "n_estimators": int(best_hyperparams["n_estimators"]),
+    "max_depth": int(best_hyperparams["max_depth"]),
+    "learning_rate": float(best_hyperparams["learning_rate"]),
+    "subsample": float(best_hyperparams["subsample"]),
+    "gamma": float(best_hyperparams["gamma"]),
+    "colsample_bytree": float(best_hyperparams["colsample_bytree"]),
+    "min_child_weight": int(best_hyperparams["min_child_weight"]),
+    "reg_alpha": int(best_hyperparams["reg_alpha"]),
+    "reg_lambda": float(best_hyperparams["reg_lambda"]),
+    "random_state": 42
+}
+
+# Dateiname anhand von Parametern generieren
+file_name = f"xgb_model_tuned_n{converted_params['n_estimators']}md{converted_params['max_depth']}lr{converted_params['learning_rate']:.4f}_params.json"
+file_path = os.path.join(output_dir, file_name)
+
+# Speichern als JSON
+with open(file_path, "w") as f:
+    json.dump(converted_params, f, indent=4)
+
+print(f"✅ Beste Hyperparameter gespeichert unter: {file_path}")
