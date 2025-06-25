@@ -1,40 +1,36 @@
 import os
-import pandas as pd
-import joblib
-from sklearn.ensemble import RandomForestRegressor
 import sys
-import os
+import json
+import joblib
+import pandas as pd
+from sklearn.ensemble import RandomForestRegressor
 
+# === Projektstruktur sicherstellen ===
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 from preprocessing import get_features_and_target
-from preprocessing import get_features_and_target
 
-# Modell
-model_name = "random_forest"
-ModelClass = RandomForestRegressor
-model_args = {"n_estimators": 100, "random_state": 42}
+# === Pfade ===
+PARAM_PATH = "model_training/random_forest/tuned/rf_model_tuned_v2_params.json"
+DATA_PATH = "data/train_data.csv"
+OUTPUT_PATH = "model_training/random_forest/final_models"
+MODEL_NAME = "rf_model_tuned_v2.pkl"
 
-# Alle Use Cases finden
-use_cases = sorted([d for d in os.listdir("data") if d.startswith("use_case_")])
-output_dir = os.path.join("model_training", model_name)
-os.makedirs(output_dir, exist_ok=True)
+# === Daten laden ===
+df = pd.read_csv(DATA_PATH)
+X, y = get_features_and_target(df)
 
-for use_case in use_cases:
-    print("Detected use cases:", use_cases)
-    print(f"Training {model_name} on {use_case}...")
+# === Parameter laden ===
+with open(PARAM_PATH, "r") as f:
+    params = json.load(f)
 
-    train_path = os.path.join("data", use_case, "train_data.csv")
-    df = pd.read_csv(train_path)
-    X, y = get_features_and_target(df)
+# === Modell trainieren ===
+model = RandomForestRegressor(**params, n_jobs=-1)
+model.fit(X, y)
 
-    model = ModelClass(**model_args)
-    model.fit(X, y)
+# === Modell speichern ===
+os.makedirs(OUTPUT_PATH, exist_ok=True)
+model_path = os.path.join(OUTPUT_PATH, MODEL_NAME)
+joblib.dump(model, model_path)
 
-    model_filename = f"rf_model_{use_case}.pkl"
-    model_path = os.path.join(output_dir, model_filename)
-    joblib.dump(model, model_path)
-
-    print(f"Saved model to {model_path}")
-
-print(f"Finished training {model_name} for all use cases.")
+print(f"✅ Modell gespeichert unter: {model_path}")
 

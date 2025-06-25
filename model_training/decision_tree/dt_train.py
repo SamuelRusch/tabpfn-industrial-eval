@@ -1,36 +1,33 @@
-import sys
 import os
-import pandas as pd
+import sys
+import json
 import joblib
+import pandas as pd
 from sklearn.tree import DecisionTreeRegressor
 
-# Zugriff auf Projekt-Root
+# Zugriff auf Projekt-Root sicherstellen
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 from preprocessing import get_features_and_target
 
-# Modell-Definition
-model_name = "decision_tree"
-model_prefix = "dt_model"
-model = DecisionTreeRegressor(random_state=42)
+# === Konfiguration ===
+PARAM_PATH = "model_training/decision_tree/tuned/dt_model_tuned_v2_params.json"
+MODEL_OUTPUT_PATH = "model_training/decision_tree/final_models/dt_final_model_train_only.pkl"
+TRAIN_PATH = "data/train_data.csv"
 
-# Use Cases durchlaufen
-use_cases = sorted([d for d in os.listdir("data") if d.startswith("use_case_")])
-print(f"Found use cases: {use_cases}")
+# === Trainingsdaten laden ===
+train_df = pd.read_csv(TRAIN_PATH)
+X, y = get_features_and_target(train_df)
 
-output_dir = os.path.join("model_training", model_name)
-os.makedirs(output_dir, exist_ok=True)
+# === Beste Hyperparameter laden ===
+with open(PARAM_PATH, "r") as f:
+    params = json.load(f)
 
-for uc in use_cases:
-    print(f"\nTraining {model_name} on {uc}...")
+# === Modell trainieren ===
+model = DecisionTreeRegressor(**params)
+model.fit(X, y)
 
-    train_path = os.path.join("data", uc, "train_data.csv")
-    df = pd.read_csv(train_path)
-    X, y = get_features_and_target(df)
+# === Modell speichern ===
+os.makedirs(os.path.dirname(MODEL_OUTPUT_PATH), exist_ok=True)
+joblib.dump(model, MODEL_OUTPUT_PATH)
 
-    model.fit(X, y)
-
-    model_path = os.path.join(output_dir, f"{model_prefix}_{uc}.pkl")
-    joblib.dump(model, model_path)
-    print(f"Saved model to {model_path}")
-
-print(f"\nDone training {model_name} for all use cases.")
+print(f"✅ Modell (nur mit Trainingsdaten) gespeichert unter: {MODEL_OUTPUT_PATH}")

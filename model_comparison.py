@@ -1,92 +1,96 @@
-import pandas as pd
-import numpy as np
 import os
+import sys
+import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn as sns
-from sklearn.metrics import mean_squared_error, r2_score
+import joblib
+from sklearn.metrics import mean_squared_error
+
+# Projektpfad einbinden
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 from preprocessing import get_features_and_target
-from tabpfn import TabPFNRegressor
-from sklearn.tree import DecisionTreeRegressor
-from sklearn.ensemble import RandomForestRegressor
-from xgboost import XGBRegressor
 
-# Use seaborn darkgrid style
-sns.set_style("darkgrid")
+# === Dev-Daten laden ===
+dev_path = os.path.abspath(os.path.join("data", "development_data.csv"))
+dev_df = pd.read_csv(dev_path)
+X_dev, y_dev = get_features_and_target(dev_df)
 
-# Define models
+# === Dev-Daten für Physikmodell ===
+dev_phys_df = pd.read_csv("data/development_data_with_physical_pull.csv")
+X_dev_phys, y_true_phys = get_features_and_target(dev_phys_df)
+y_phys = dev_phys_df["F_pull_physical"]
+
+# === Bias-Modell laden ===
+bias_model_path = "model_training/xgb_physics/xgb_bias_model.pkl"
+bias_model = joblib.load(bias_model_path)
+X_bias_input = X_dev_phys.drop(columns=["F_pull_physical"], errors="ignore")
+bias_pred = bias_model.predict(X_bias_input)
+f_pull_corrected = y_phys + bias_pred
+bias_errors = np.abs(f_pull_corrected - y_true_phys)
+bias_rmse = np.sqrt(mean_squared_error(y_true_phys, f_pull_corrected))
+
+# === Modelle & Pfade ===
 models = {
-    "TabPFN": TabPFNRegressor(random_state=42),
-    "Decision Tree": DecisionTreeRegressor(random_state=42),
-    "Random Forest": RandomForestRegressor(n_estimators=100, random_state=42),
-    "XGBoost": XGBRegressor(n_estimators=100, random_state=42),
+    "Decision Tree": {
+        "path": "model_training/decision_tree/final_models/dt_final_model_train_only.pkl",
+        "color": "blue",
+        "marker": "o"
+    },
+    "Random Forest": {
+        "path": "model_training/random_forest/final_models/rf_final_model_train_only.pkl",
+        "color": "green",
+        "marker": "s"
+    },
+    "XGBoost": {
+        "path": "model_training/xgboost/final_models/xgb_final_model_train_only.pkl",
+        "color": "red",
+        "marker": "D"
+    },
+    "KNN (k=2)": {
+        "path": "model_training/knn_regressor/final_models/knn_final_model_train_only.pkl",
+        "color": "purple",
+        "marker": "^"
+    },
+    "TabPFN": {
+        "path": "model_training/tabpfn/final_models/tabpfn_model_train_only.pkl",
+        "color": "orange",
+        "marker": "v"
+    }
+    
 }
 
-# Discover all use case directories
-use_cases = sorted([d for d in os.listdir("data") if d.startswith("use_case_")])
-results_base = "results"
-os.makedirs(results_base, exist_ok=True)
+plt.figure(figsize=(10, 6))
 
-for uc in use_cases:
-    # Paths for this use case
-    train_path = os.path.join("data", uc, "train_data.csv")
-    dev_path = os.path.join("data", uc, "dev_data.csv")
+# === CDF für Bias-Korrektur-Modell ===
+sorted_errors = np.sort(bias_errors)
+cdf = np.arange(1, len(bias_errors) + 1) / len(bias_errors)
+plt.plot(sorted_errors, cdf, label=f"Physics + XGBoost Bias (RMSE: {bias_rmse:.2f})", 
+         color="black", marker="*", markevery=1)
 
-    # Load and preprocess data
-    train_df = pd.read_csv(train_path)
-    dev_df = pd.read_csv(dev_path)
-    X_train, y_train = get_features_and_target(train_df)
-    X_dev, y_dev = get_features_and_target(dev_df)
-    X_dev = X_dev[X_train.columns]  # align columns
+# === CDF für jedes Modell ===
+for name, cfg in models.items():
+    model = joblib.load(cfg["path"])
+    preds = model.predict(X_dev)
+    errors = np.abs(preds - y_dev)
+    rmse = np.sqrt(mean_squared_error(y_dev, preds))
 
-    # Prepare structures for results
-    results = {}
-    cdf_data = {}
+    sorted_errors = np.sort(errors)
+    cdf = np.arange(1, len(errors) + 1) / len(errors)
 
-    # Evaluate each model
-    for name, model in models.items():
-        model.fit(X_train, y_train)
-        preds = model.predict(X_dev)
+    plt.plot(sorted_errors, cdf, label=f"{name} (RMSE: {rmse:.2f})", 
+             color=cfg["color"], marker=cfg["marker"], markevery=1)
 
-        mse = mean_squared_error(y_dev, preds)
-        rmse = np.sqrt(mse)
-        r2 = r2_score(y_dev, preds)
+# === Plot-Design ===
+plt.xlabel("Absoluter Fehler")
+plt.ylabel("Kumulative Verteilung")
+plt.title("CDF-Vergleich der Modelle auf dem Dev-Datensatz")
+plt.grid(True, linestyle="--", alpha=0.6)
+plt.legend()
+plt.tight_layout()
 
-        results[name] = {"MSE": mse, "RMSE": rmse, "R2": r2}
-
-        abs_errors = np.abs(preds - y_dev)
-        sorted_errors = np.sort(abs_errors)
-        cdf = np.arange(1, len(sorted_errors) + 1) / len(sorted_errors)
-        cdf_data[name] = (sorted_errors, cdf)
-
-    # Create results directory
-    uc_results_dir = os.path.join(results_base, uc)
-    os.makedirs(uc_results_dir, exist_ok=True)
-
-    # Save results as CSV
-    results_df = pd.DataFrame(results).T.round(2)
-    results_df.to_csv(os.path.join(uc_results_dir, "results.csv"))
-
-    # Plot and save individual metric charts
-    for metric in ["MSE", "RMSE", "R2"]:
-        fig, ax = plt.subplots(figsize=(6, 4))
-        results_df[metric].plot(kind="bar", ax=ax, color="skyblue")
-        ax.set_ylabel(metric)
-        ax.set_title(f"{metric} per Model - {uc}")
-        fig.tight_layout()
-        fig.savefig(os.path.join(uc_results_dir, f"metric_{metric.lower()}.png"))
-        plt.close(fig)
-
-
-    # Plot and save CDF chart
-    fig, ax = plt.subplots(figsize=(8, 5))
-    for name, (errors, cdf) in cdf_data.items():
-        ax.plot(errors, cdf, marker=".", linestyle="none", label=name)
-    ax.set_xlabel("Absolute Error |ŷ - y| [N]")
-    ax.set_ylabel("Cumulative Probability")
-    ax.set_title(f"CDF of Absolute Errors - {uc}")
-    ax.legend()
-    fig.tight_layout()
-    fig.savefig(os.path.join(uc_results_dir, "cdf_errors.png"))
-    plt.close(fig)
-
-print("Model evaluation complete. Check the 'results/' folder for metrics and plots.")
+# === Plot speichern ===
+plot_path = os.path.join("model_training", "model_comparison", "cdf_plot_all_models.png")
+os.makedirs(os.path.dirname(plot_path), exist_ok=True)
+plt.savefig(plot_path)
+print(f"\n✅ CDF-Plot gespeichert unter: {plot_path}")
+plt.show()
