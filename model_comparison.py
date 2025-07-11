@@ -31,11 +31,6 @@ bias_rmse = np.sqrt(mean_squared_error(y_true_phys, f_pull_corrected))
 
 # === Modelle & Pfade ===
 models = {
-    "Decision Tree": {
-        "path": "model_training/decision_tree/final_models/dt_final_model_train_only.pkl",
-        "color": "blue",
-        "marker": "o"
-    },
     "Random Forest": {
         "path": "model_training/random_forest/final_models/rf_final_model_train_only.pkl",
         "color": "green",
@@ -45,11 +40,6 @@ models = {
         "path": "model_training/xgboost/final_models/xgb_final_model_train_only.pkl",
         "color": "red",
         "marker": "D"
-    },
-    "KNN (k=2)": {
-        "path": "model_training/knn_regressor/final_models/knn_final_model_train_only.pkl",
-        "color": "purple",
-        "marker": "^"
     },
     "TabPFN": {
         "path": "model_training/tabpfn/final_models/tabpfn_model_train_only.pkl",
@@ -64,7 +54,7 @@ plt.figure(figsize=(10, 6))
 # === CDF für Bias-Korrektur-Modell ===
 sorted_errors = np.sort(bias_errors)
 cdf = np.arange(1, len(bias_errors) + 1) / len(bias_errors)
-plt.plot(sorted_errors, cdf, label=f"Physics + XGBoost Bias (RMSE: {bias_rmse:.2f})", 
+plt.plot(sorted_errors, cdf, label=f"XGBoost with Physics", 
          color="black", marker="*", markevery=1)
 
 # === CDF für jedes Modell ===
@@ -77,13 +67,13 @@ for name, cfg in models.items():
     sorted_errors = np.sort(errors)
     cdf = np.arange(1, len(errors) + 1) / len(errors)
 
-    plt.plot(sorted_errors, cdf, label=f"{name} (RMSE: {rmse:.2f})", 
+    plt.plot(sorted_errors, cdf, label=f"{name}" ,
              color=cfg["color"], marker=cfg["marker"], markevery=1)
 
 # === Plot-Design ===
-plt.xlabel("Absoluter Fehler")
-plt.ylabel("Kumulative Verteilung")
-plt.title("CDF-Vergleich der Modelle auf dem Dev-Datensatz")
+plt.xlabel("absolute error")
+plt.ylabel("Cumulative distribution")
+plt.title("CDF-Comparison")
 plt.grid(True, linestyle="--", alpha=0.6)
 plt.legend()
 plt.tight_layout()
