@@ -4,7 +4,11 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import joblib
+import torch
+import json
 from sklearn.metrics import mean_squared_error
+from xgboost import XGBRegressor
+from tabpfn import TabPFNRegressor
 
 # Projektpfad einbinden
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
@@ -20,11 +24,24 @@ dev_phys_df = pd.read_csv("data/development_data_with_physical_pull.csv")
 X_dev_phys, y_true_phys = get_features_and_target(dev_phys_df)
 y_phys = dev_phys_df["F_pull_physical"]
 
-# === Bias-Modell laden ===
-bias_model_path = "model_training/xgb_physics/xgb_bias_model.pkl"
-bias_model = joblib.load(bias_model_path)
+# === XGBoost Bias-Modell neu trainieren ===
+# Lade Trainings- und Dev-Daten für Bias-Model
+train_phys_df = pd.read_csv("data/train_data_with_physical_pull.csv")
+full_phys_df = pd.concat([train_phys_df, dev_phys_df], ignore_index=True)
+X_full_phys, y_true_full_phys = get_features_and_target(full_phys_df)
+y_full_phys = full_phys_df["F_pull_physical"]
+y_bias = y_true_full_phys - y_full_phys  # Ziel: Bias
+
+# Lade die besten Hyperparameter
+with open("model_training/xgb_physics/tuned/xgb_bias_tuned_v1_params.json", "r") as f:
+    xgb_params = json.load(f)
+
+xgb_bias_model = XGBRegressor(**xgb_params)
+xgb_bias_model.fit(X_full_phys, y_bias)
+
+# Bias-Vorhersage auf Dev-Daten
 X_bias_input = X_dev_phys.drop(columns=["F_pull_physical"], errors="ignore")
-bias_pred = bias_model.predict(X_bias_input)
+bias_pred = xgb_bias_model.predict(X_dev_phys)
 f_pull_corrected = y_phys + bias_pred
 bias_errors = np.abs(f_pull_corrected - y_true_phys)
 bias_rmse = np.sqrt(mean_squared_error(y_true_phys, f_pull_corrected))
@@ -46,7 +63,6 @@ models = {
         "color": "orange",
         "marker": "v"
     }
-    
 }
 
 plt.figure(figsize=(10, 6))
@@ -59,15 +75,23 @@ plt.plot(sorted_errors, cdf, label=f"XGBoost with Physics",
 
 # === CDF für jedes Modell ===
 for name, cfg in models.items():
-    model = joblib.load(cfg["path"])
-    preds = model.predict(X_dev)
+    if name == "TabPFN":
+        # Train TabPFN fresh
+        train_df = pd.read_csv("data/train_data.csv")
+        X_train, y_train = get_features_and_target(train_df)
+        model = TabPFNRegressor(random_state=42)
+        model.fit(X_train, y_train)
+        preds = model.predict(X_dev)
+    else:
+        model = joblib.load(cfg["path"])
+        preds = model.predict(X_dev)
     errors = np.abs(preds - y_dev)
     rmse = np.sqrt(mean_squared_error(y_dev, preds))
 
     sorted_errors = np.sort(errors)
     cdf = np.arange(1, len(errors) + 1) / len(errors)
 
-    plt.plot(sorted_errors, cdf, label=f"{name}" ,
+    plt.plot(sorted_errors, cdf, label=f"{name}",
              color=cfg["color"], marker=cfg["marker"], markevery=1)
 
 # === Plot-Design ===
@@ -84,3 +108,11 @@ os.makedirs(os.path.dirname(plot_path), exist_ok=True)
 plt.savefig(plot_path)
 print(f"\n✅ CDF-Plot gespeichert unter: {plot_path}")
 plt.show()
+
+torch_load_old = torch.load
+def torch_load_cpu(*args, **kwargs):
+    kwargs['map_location'] = torch.device('cpu')
+    return torch_load_old(*args, **kwargs)
+torch.load = torch_load_cpu
+
+# Now joblib.load will use CPU mapping for torch models
