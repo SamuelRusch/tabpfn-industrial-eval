@@ -1,4 +1,0 @@
-,MSE,RMSE,R2
-TabPFN,83549.4,289.05,0.63
-XGBoost Tuned (pkl),82086.67,286.51,0.64
-KNN Regressor (k=5),79702.57,282.32,0.65
