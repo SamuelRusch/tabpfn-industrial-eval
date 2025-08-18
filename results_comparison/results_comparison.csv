@@ -1,6 +1,0 @@
-,MSE,RMSE,R2
-TabPFN,87981.59,296.62,0.45
-XGBoost Tuned,71870.08,268.09,0.68
-KNN Regressor (k=4),74638.73,273.2,0.67
-Random Forest,82300.6,286.88,0.64
-Decision Tree,72925.02,270.05,0.68
