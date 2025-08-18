@@ -7,4 +7,5 @@ matplotlib
 tabpfn
 xgboost
 torch
+kaleido
 
