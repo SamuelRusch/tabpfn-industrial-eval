@@ -1,15 +1,19 @@
 import pandas as pd
+import os
 from sklearn.model_selection import train_test_split
 
 data_path = 'data/'
 
 df = pd.read_csv(data_path + 'Data_RSW.csv')
+if os.is_file(data_path + 'Data_RSW.csv'):
+    print('exists')
 
 df = df.drop_duplicates(subset=["Sample ID"], keep="last")
 
-df["Thickness A+B (mm)"] = df["Thickness A (mm)"] + df["Thickness B (mm)"]
-threshold = df["Thickness A+B (mm)"].quantile(0.99)
-df = df[df["Thickness A+B (mm)"] <= threshold]
+# df["Thickness A+B (mm)"] = df["Thickness A (mm)"] + df["Thickness B (mm)"]
+# threshold = df["Thickness A+B (mm)"].quantile(0.99)
+# df = df[df["Thickness A+B (mm)"] <= threshold]
+
 
 train_dev_data, test_data = train_test_split(df, test_size=0.3, random_state=42)
 
