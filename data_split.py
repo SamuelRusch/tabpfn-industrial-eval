@@ -13,16 +13,12 @@ df = df.drop_duplicates(subset="Sample ID", keep="last")
 # Posted by Negative Correlation, modified by community. See post 'Timeline' for change history
 # Retrieved 2026-02-19, License - CC BY-SA 4.0
 
-# --- Build group-level table ---
-groups = df.groupby("Sample ID")["Category"].first().reset_index()
-# groups has: Sample ID | Category
-
 # --- First split: 80% train+dev, 20% test ---
 sss1 = StratifiedShuffleSplit(test_size=0.20, n_splits=1, random_state=42)
-train_dev_idx, test_idx = next(sss1.split(groups["Sample ID"], groups["Category"]))
+train_dev_idx, test_idx = next(sss1.split(df["Sample ID"], df["Category"]))
 
-train_dev_groups = groups.iloc[train_dev_idx]["Sample ID"]
-test_groups      = groups.iloc[test_idx]["Sample ID"]
+train_dev_groups = df.iloc[train_dev_idx]["Sample ID"]
+test_groups      = df.iloc[test_idx]["Sample ID"]
 
 train_dev = df[df["Sample ID"].isin(train_dev_groups)]
 test      = df[df["Sample ID"].isin(test_groups)]
