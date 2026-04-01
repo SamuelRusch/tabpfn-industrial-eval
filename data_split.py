@@ -6,6 +6,7 @@ data_path = 'data/'
 
 df = pd.read_csv(data_path + 'Data_RSW.csv')
 df = df[df["Comments"] != "Communication error"]
+df = df[df["Category"] != "Explode"]
 df = df.drop_duplicates(subset="Sample ID", keep="last")
 
 
@@ -37,6 +38,7 @@ dev   = train_dev[train_dev["Sample ID"].isin(dev_groups)]
 
 # --- Save ---
 train.to_csv(data_path + "train_data.csv", index=False)
+train_dev.to_csv(data_path + "train_dev_data.csv", index=False)
 dev.to_csv(data_path + "development_data.csv", index=False)
 test.to_csv(data_path + "test_data.csv", index=False)
 
