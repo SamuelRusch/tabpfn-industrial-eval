@@ -65,6 +65,22 @@ def plot_visualizer(true_vals, pred_vals, categories, title="Fold Predictions"):
         marker=dict(symbol="x", color="blue", size=9)
     ))
 
+    # Explode
+    fig.add_trace(go.Scatter(
+        x=sample_idx[mask_explode],
+        y=true_vals[mask_explode],
+        mode="markers",
+        name="Explode (True)",
+        marker=dict(symbol="triangle-up", color="red", size=9)
+    ))
+    fig.add_trace(go.Scatter(
+        x=sample_idx[mask_explode],
+        y=pred_vals[mask_explode],
+        mode="markers",
+        name="Explode (Pred)",
+        marker=dict(symbol="triangle-up", color="blue", size=9)
+    ))
+
     # Connecting lines
     for i in range(len(sample_idx)):
         fig.add_trace(go.Scatter(

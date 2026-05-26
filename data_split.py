@@ -6,7 +6,6 @@ data_path = 'data/'
 
 df = pd.read_csv(data_path + 'Data_RSW.csv')
 df = df[df["Comments"] != "Communication error"]
-df = df[df["Category"] != "Explode"]
 df = df.drop_duplicates(subset="Sample ID", keep="last")
 
 
