@@ -80,6 +80,7 @@ def plot_visualizer(true_vals, pred_vals, categories, title="Fold Predictions"):
         name="Explode (Pred)",
         marker=dict(symbol="triangle-up", color="blue", size=9)
     ))
+    
 
     # Connecting lines
     for i in range(len(sample_idx)):
@@ -129,6 +130,7 @@ def plot_visualizer_classification(y_true, y_pred, class_labels, title="Confusio
     plt.show()
 
     # F1 Score
+
     f1 = f1_score(y_true, y_pred, average="macro")
     print("F1 Score:", f1)
 
