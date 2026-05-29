@@ -27,7 +27,7 @@ test_groups      = df.iloc[test_idx]["Sample ID"]
 train_dev = df[df["Sample ID"].isin(train_dev_groups)]
 test      = df[df["Sample ID"].isin(test_groups)]
 
-# --- Second split: 75% train, 25% dev (→ 20% of total) ---
+# --- Second split: 75% train, 25% dev (End Split 60/20/20) ---
 groups_td = train_dev.groupby("Sample ID")["Category"].first().reset_index()
 
 sss2 = StratifiedShuffleSplit(test_size=0.25, n_splits=1, random_state=42)
