@@ -21,7 +21,3 @@ __pycache__/
 
 # macOS
 .DS_Store
-
-# Local assistant config
-CLAUDE.md
-.claude/
